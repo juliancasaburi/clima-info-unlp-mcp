@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "clima-info-unlp-mcp": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${workspaceFolder}/build/index.js"]
+    }
+  }
+}

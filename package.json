@@ -1,0 +1,41 @@
+{
+  "name": "clima-info-unlp-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Facultad de Informática UNLP weather station data from clima.info.unlp.edu.ar",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "clima-info-unlp-mcp": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "npm run build && node build/index.js",
+    "prepare": "npm run build"
+  },
+  "keywords": ["mcp", "weather", "unlp", "clima", "model-context-protocol"],
+  "author": "Julián Casaburi",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4"
+  },
+  "files": ["build"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/juliancasaburi/clima-info-unlp-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/juliancasaburi/clima-info-unlp-mcp/issues"
+  },
+  "homepage": "https://github.com/juliancasaburi/clima-info-unlp-mcp#readme",
+  "engines": {
+    "node": ">=18.17"
+  }
+}
