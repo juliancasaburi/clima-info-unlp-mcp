@@ -1,9 +1,13 @@
 {
   "servers": {
-    "clima-info-unlp-mcp": {
+    "clima-info-unlp-mcp-local": {
       "type": "stdio",
       "command": "node",
       "args": ["${workspaceFolder}/build/index.js"]
+    },
+    "clima-info-unlp-mcp-aws": {
+      "type": "http",
+      "url": "https://immzbr28g9.execute-api.us-east-1.amazonaws.com/prod/mcp"
     }
   }
 }

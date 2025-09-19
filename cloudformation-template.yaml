@@ -1,0 +1,210 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'MCP Clima Info UNLP Server - API Gateway + Lambda with AWS Labs MCP Wrapper (No Authentication)'
+
+Parameters:
+  StackNameSuffix:
+    Type: String
+    Default: ''
+    Description: 'Optional suffix for resource names'
+  
+  CodeBucket:
+    Type: String
+    Description: 'S3 bucket containing the Lambda deployment package'
+    
+  CodeKey:
+    Type: String
+    Description: 'S3 key for the Lambda deployment package'
+    Default: 'clima-info-unlp-mcp-api-gateway.zip'
+
+Resources:
+  # IAM Role for Lambda Function
+  ClimaInfoMcpLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'ClimaInfoMcpLambdaRole${StackNameSuffix}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  # CloudWatch Log Group
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub 'mcp-server-clima-info-unlp${StackNameSuffix}'
+      RetentionInDays: 1
+    DeletionPolicy: Delete
+
+  # Lambda Function
+  McpLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'mcp-server-clima-info-unlp${StackNameSuffix}'
+      Runtime: nodejs22.x
+      Handler: index.handler
+      Role: !GetAtt ClimaInfoMcpLambdaRole.Arn
+      Code:
+        S3Bucket: !Ref CodeBucket
+        S3Key: !Ref CodeKey
+      MemorySize: 512
+      Timeout: 30
+      Environment:
+        Variables:
+          LOG_LEVEL: DEBUG
+      LoggingConfig:
+        LogGroup: !Ref LogGroup
+    DependsOn:
+      - ClimaInfoMcpLambdaRole
+      - LogGroup
+
+  # API Gateway REST API
+  ClimaInfoMcpApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub 'MCP Clima Info UNLP API Gateway ${StackNameSuffix}'
+      Description: 'API Gateway for MCP Clima Info UNLP server with no authentication'
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  # API Gateway Resource for /mcp
+  McpResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ClimaInfoMcpApiGateway
+      ParentId: !GetAtt ClimaInfoMcpApiGateway.RootResourceId
+      PathPart: mcp
+
+  # OPTIONS method for CORS (root)
+  RootOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ClimaInfoMcpApiGateway
+      ResourceId: !GetAtt ClimaInfoMcpApiGateway.RootResourceId
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: '204'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'*'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+      MethodResponses:
+        - StatusCode: '204'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Methods: true
+
+  # OPTIONS method for CORS (/mcp)
+  McpOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ClimaInfoMcpApiGateway
+      ResourceId: !Ref McpResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: '204'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'*'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+      MethodResponses:
+        - StatusCode: '204'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Methods: true
+
+  # ANY method for /mcp (main MCP endpoint)
+  McpAnyMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ClimaInfoMcpApiGateway
+      ResourceId: !Ref McpResource
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${McpLambdaFunction.Arn}/invocations'
+
+  # Lambda permission for API Gateway (production stage)
+  LambdaApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt McpLambdaFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ClimaInfoMcpApiGateway}/*/mcp'
+
+  # Lambda permission for API Gateway (test stage)
+  LambdaApiGatewayTestPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt McpLambdaFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ClimaInfoMcpApiGateway}/test-invoke-stage/*/mcp'
+
+  # API Gateway Deployment
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref ClimaInfoMcpApiGateway
+      Description: 'API Gateway for MCP Clima Info UNLP server with no authentication'
+    DependsOn:
+      - McpAnyMethod
+      - McpOptionsMethod
+      - RootOptionsMethod
+
+  # API Gateway Stage
+  ApiGatewayStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      RestApiId: !Ref ClimaInfoMcpApiGateway
+      DeploymentId: !Ref ApiGatewayDeployment
+      StageName: prod
+      MethodSettings:
+        - ResourcePath: '/*'
+          HttpMethod: '*'
+          DataTraceEnabled: false
+          ThrottlingBurstLimit: 200
+          ThrottlingRateLimit: 100
+
+Outputs:
+  McpServerUrl:
+    Description: 'Clima Info UNLP MCP API Gateway URL'
+    Value: !Sub 'https://${ClimaInfoMcpApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod/mcp'
+    Export:
+      Name: !Sub 'ClimaInfoMcpServerUrl${StackNameSuffix}'
+
+  ApiGatewayId:
+    Description: 'API Gateway ID'
+    Value: !Ref ClimaInfoMcpApiGateway
+
+  ApiGatewayEndpoint:
+    Description: 'API Gateway Base Endpoint'
+    Value: !Sub 'https://${ClimaInfoMcpApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod/'
+
+  LambdaFunctionArn:
+    Description: 'Lambda Function ARN'
+    Value: !GetAtt McpLambdaFunction.Arn
+
+  LambdaFunctionName:
+    Description: 'Lambda Function Name'
+    Value: !Ref McpLambdaFunction

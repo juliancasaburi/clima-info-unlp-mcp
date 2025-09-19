@@ -12,21 +12,41 @@
     "start": "node build/index.js",
     "dev": "tsx src/index.ts",
     "test": "npm run build && node build/index.js",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "package": "npm run build && node scripts/package-api-gateway.cjs",
+    "deploy": "npm run package",
+    "deploy:cloudformation": "node scripts/deploy-cloudformation.cjs",
+    "validate:cloudformation": "aws cloudformation validate-template --template-body file://cloudformation-template.yaml",
+    "test:cdk": "node scripts/test-cdk.cjs"
   },
-  "keywords": ["mcp", "weather", "unlp", "clima", "model-context-protocol"],
+  "keywords": [
+    "mcp",
+    "weather",
+    "unlp",
+    "clima",
+    "model-context-protocol"
+  ],
   "author": "Julián Casaburi",
   "license": "MIT",
   "dependencies": {
+    "@aws/run-mcp-servers-with-aws-lambda": "^0.4.2",
     "@modelcontextprotocol/sdk": "^1.0.4",
+    "aws": "^0.0.3-2",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.152",
     "@types/node": "^22.0.0",
+    "archiver": "^7.0.1",
+    "aws-cdk-lib": "^2.215.0",
+    "cdk-nag": "^2.37.30",
+    "constructs": "^10.4.2",
     "tsx": "^4.19.0",
     "typescript": "^5.5.4"
   },
-  "files": ["build"],
+  "files": [
+    "build"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/juliancasaburi/clima-info-unlp-mcp.git"
@@ -36,6 +56,6 @@
   },
   "homepage": "https://github.com/juliancasaburi/clima-info-unlp-mcp#readme",
   "engines": {
-    "node": ">=18.17"
+    "node": ">=22.0.0"
   }
 }

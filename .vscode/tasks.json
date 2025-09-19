@@ -14,6 +14,52 @@
 				"$tsc"
 			],
 			"group": "build"
+		},
+		{
+			"label": "Package for Lambda",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"package"
+			],
+			"isBackground": false,
+			"dependsOn": "Build MCP Server",
+			"group": "build"
+		},
+		{
+			"label": "Validate CloudFormation",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"validate:cloudformation"
+			],
+			"isBackground": false,
+			"group": "test"
+		},
+		{
+			"label": "Deploy CloudFormation",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"deploy:cloudformation"
+			],
+			"isBackground": false,
+			"dependsOn": "Package for Lambda",
+			"group": "build"
+		},
+		{
+			"label": "Test CDK",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:cdk"
+			],
+			"isBackground": false,
+			"group": "test"
 		}
 	]
 }
