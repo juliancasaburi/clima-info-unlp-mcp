@@ -123,7 +123,7 @@ Configure in `.vscode/mcp.json`:
     },
     "clima-info-unlp-mcp-aws": {
       "type": "http",
-      "url": "https://immzbr28g9.execute-api.us-east-1.amazonaws.com/prod/mcp"
+      "url": "https://clima-info-unlp-mcp.casaburi.dev/mcp"
     }
   }
 }
